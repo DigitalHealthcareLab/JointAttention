@@ -20,7 +20,7 @@
     1. ija
     2. rja_high
     3. rja_low 
-*raw_data_png
+* raw_data_png
     1. ija
     2. rja_high
     3. rja_low
@@ -34,6 +34,6 @@
 ### [`data/dataset/rja_low_videofile_with_dx.csv`](data/dataset/rja_low_videofile_with_sev.csv)
          
 * Labels
-Binary labels: 0 - TD, 1 - ASD
-Multi-labels: 0 - non-ASD, 1 - mild-moderate ASD, 2 - severe ASD
-Cut-offs for multi-labels are based on on ADOS CSS or CARS cut-off scores# JointAttention
+* Binary labels: 0 - TD, 1 - ASD
+* Multi-labels: 0 - non-ASD, 1 - mild-moderate ASD, 2 - severe ASD
+* Cut-offs for multi-labels are based on on ADOS CSS or CARS cut-off scores
