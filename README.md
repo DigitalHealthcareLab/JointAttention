@@ -27,11 +27,11 @@
 
 ## Dataset
 ### [`data/dataset/ija_videofile_with_dx.csv`](data/dataset/ija_videofile_with_dx.csv)
-### [`data/dataset/ija_videofile_with_dx.csv`](data/dataset/ija_videofile_with_sev.csv)
+### [`data/dataset/ija_videofile_with_sev.csv`](data/dataset/ija_videofile_with_sev.csv)
 ### [`data/dataset/rja_high_videofile_with_dx.csv`](data/dataset/rja_high_videofile_with_dx.csv)
-### [`data/dataset/rja_high_videofile_with_dx.csv`](data/dataset/rja_high_videofile_with_sev.csv)
+### [`data/dataset/rja_high_videofile_with_sev.csv`](data/dataset/rja_high_videofile_with_sev.csv)
 ### [`data/dataset/rja_low_videofile_with_dx.csv`](data/dataset/rja_low_videofile_with_dx.csv)
-### [`data/dataset/rja_low_videofile_with_dx.csv`](data/dataset/rja_low_videofile_with_sev.csv)
+### [`data/dataset/rja_low_videofile_with_sev.csv`](data/dataset/rja_low_videofile_with_sev.csv)
          
 * Labels
 * Binary labels: 0 - TD, 1 - ASD
