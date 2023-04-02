@@ -1,5 +1,5 @@
 ## Project name: JointAttention
-* author: Chanyoung ko
+* author: Chanyoung Ko
 * date: 2022-03-31
 * python version: 3.6.8
 * opencv version: 2.4.5
