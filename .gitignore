@@ -19,7 +19,7 @@ env
 *.MP4
 *.txt
 *.jpg
-*.csv
+# *.csv
 *.npy
 *.pth
 *.pt
