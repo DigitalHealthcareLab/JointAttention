@@ -9,7 +9,7 @@ import os
 import sys
 
 from src.earlystopping import EarlyStopping
-from src.data_loader_diagnosis_videos import get_loader
+from src.data_loader_videos import get_loader
 from src.custom_model_videos_res18 import Resnet18Rnn
 
 class Task(Enum):
@@ -26,7 +26,7 @@ target_fold_num = int(sys.argv[4]) # Under fold_num
 
 
 # 경로 및 Argument 설정
-ROOT_PATH    = Path('/home/data/asd_jointattention')
+ROOT_PATH    = Path('data/asd_jointattention')
 DATA_PATH    = ROOT_PATH.joinpath("raw_data_bgr").joinpath(task_name.lower())
 PROC_PATH    = ROOT_PATH.joinpath("PROC_DATA").joinpath(task_name.lower())
 if target_column == 'label' : 

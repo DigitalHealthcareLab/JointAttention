@@ -13,7 +13,7 @@ import torch
 import sys
 from joblib import Parallel, delayed
 
-from src.data_loader_diagnosis_videos import get_loader
+from src.data_loader_videos import get_loader
 from src.custom_model_videos_res18 import Resnet18Rnn
 
 BATCH_SIZE = 1

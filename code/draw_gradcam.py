@@ -6,12 +6,12 @@ import torch
 from torchvision.transforms.functional import to_pil_image
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import transforms
-from code.data_loader_sev_frames import get_loader
+from data_loader_sev_frames import get_loader
 from custom_model_gradcam_res18 import GradCamModel
 import matplotlib.pyplot as plt
 import myutils
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 class Task(Enum):
     IJA = auto()

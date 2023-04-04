@@ -18,7 +18,6 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
-    auc,
     roc_curve, 
 )
 from torchmetrics.classification import ConfusionMatrix
@@ -50,13 +49,12 @@ class score_loader :
         self.total_labels.extend(labels)
         self.total_preds.extend(preds)
         
-    def load_all_result(self) : 
-        num_folds = 5
+    def load_all_result(self, num_folds) : 
         for fold_num in range(num_folds): 
             self.load_fold_result(fold_num)
 
-def bootstraping(y_true, y_pred, n_bootstraps=1000, seed=2023):
-    yonden_cut = find_youden_index(y_true, y_pred)
+def bootstraping_auc(y_true, y_pred, n_bootstraps=1000, seed=2023):
+    # yonden_cut = find_youden_index(y_true, y_pred)
     np.random.seed(seed)
     bootstrapped_scores = []
     for i in range(n_bootstraps):
@@ -64,7 +62,7 @@ def bootstraping(y_true, y_pred, n_bootstraps=1000, seed=2023):
         indices = np.random.randint(0, len(y_pred), len(y_pred))
         if len(np.unique(y_true[indices])) < 2:
             continue
-        score = roc_auc_score(y_true[indices], y_pred[indices])
+        score = roc_auc_score(y_true[indices], y_pred[indices], multi_class='ovr')
         bootstrapped_scores.append(score)
 
     sorted_scores = np.array(bootstrapped_scores)
@@ -75,44 +73,11 @@ def bootstraping(y_true, y_pred, n_bootstraps=1000, seed=2023):
     ci_low = sorted_scores[int(0.025 * len(sorted_scores))]
     ci_high = sorted_scores[int(0.975 * len(sorted_scores))]
 
-    return avg_score, ci_low, ci_high
-
-
-# 95% CI with bootstrap
-def bootstrap_score(y_true, y_pred, n_bootstraps=1000, score_type="auc", seed=2023):
-    if score_type == "auc" :
-        score_func = roc_auc_score
-    elif score_type == 'recall':
-        score_func = recall_score
-        y_pred = y_pred >= 0.5
-    elif score_type == 'precision': 
-        score_func = precision_score
-        y_pred = y_pred >= 0.5
-    elif score_type == "accuracy" : 
-        score_func = accuracy_score
-        y_pred = y_pred >= 0.5
-
-    np.random.seed(seed)
-    bootstrapped_scores = []
-    for i in range(n_bootstraps):
-        # bootstrap by sampling with replacement on the prediction indices
-        indices = np.random.randint(0, len(y_pred), len(y_pred))
-        if len(np.unique(y_true[indices])) < 2:
-            continue
-        score = score_func(y_true[indices], y_pred[indices])
-        bootstrapped_scores.append(score)
-
-    sorted_scores = np.array(bootstrapped_scores)
-    sorted_scores.sort()
-
-    # 95% CI
-    avg_score = np.mean(sorted_scores)
-    ci_low = sorted_scores[int(0.025 * len(sorted_scores))]
-    ci_high = sorted_scores[int(0.975 * len(sorted_scores))]
     return avg_score, ci_low, ci_high
 
 def bootstraping_acc(y_true, y_pred, n_bootstraps=1000, seed=2023):
     y_pred = np.argmax(y_pred, axis=1)
+    y_pred = y_pred >= 0.5
     np.random.seed(seed)
     bootstrapped_scores = []
     for i in range(n_bootstraps):
@@ -135,6 +100,7 @@ def bootstraping_acc(y_true, y_pred, n_bootstraps=1000, seed=2023):
 
 def bootstraping_f1(y_true, y_pred, n_bootstraps=1000, seed=2023):
     y_pred = np.argmax(y_pred, axis=1)
+    # y_pred = y_pred >= 0.5
     np.random.seed(seed)
     bootstrapped_scores = []
     for i in range(n_bootstraps):
@@ -142,7 +108,8 @@ def bootstraping_f1(y_true, y_pred, n_bootstraps=1000, seed=2023):
         indices = np.random.randint(0, len(y_pred), len(y_pred))
         if len(np.unique(y_true[indices])) < 2:
             continue
-        score = f1_score(y_true[indices], y_pred[indices], average='macro')
+        score = f1_score(y_true[indices], y_pred[indices], average='weighted')
+        # score = f1_score(y_true[indices], y_pred[indices])
         bootstrapped_scores.append(score)
 
     sorted_scores = np.array(bootstrapped_scores)
@@ -155,49 +122,106 @@ def bootstraping_f1(y_true, y_pred, n_bootstraps=1000, seed=2023):
 
     return avg_score, ci_low, ci_high
 
-def bootstraping_precision(y_true, y_pred, n_bootstraps=1000, seed=2023):
-    y_pred = np.argmax(y_pred, axis=1)
+def return_binary_scores(y_true, y_pred):
+    soft_pred = y_pred[:,1]
+    hard_pred = np.argmax(y_pred, axis=1)
+    auroc = roc_auc_score(y_true, soft_pred)
+    acc = accuracy_score(y_true, hard_pred)
+    precision = precision_score(y_true, hard_pred)
+    recall = recall_score(y_true, hard_pred)
+    # f1 = f1_score(y_true, hard_pred)
+    return auroc, acc, precision, recall #, f1
+
+def return_multiclass_scores(y_true, y_pred):
+    soft_pred = y_pred.copy()
+    hard_pred = np.argmax(y_pred, axis=1)
+    
+    auroc = roc_auc_score(y_true, soft_pred, multi_class='ovr')
+    acc = accuracy_score(y_true, hard_pred)
+    precision = precision_score(y_true, hard_pred, average='weighted')
+    recall = recall_score(y_true, hard_pred, average='weighted')
+    # f1 = f1_score(y_true, hard_pred, average='weighted')
+    return auroc, acc, precision, recall #, f1
+
+
+def bootstrap_score(y_true, y_pred, n_bootstraps=3000, score_type="auc", seed=2023):
+    is_binary = y_pred.shape[1] == 2   
+
     np.random.seed(seed)
-    bootstrapped_scores = []
+    aurocs = []
+    accs = []
+    precisions = []
+    recalls = []
     for i in range(n_bootstraps):
         # bootstrap by sampling with replacement on the prediction indices
         indices = np.random.randint(0, len(y_pred), len(y_pred))
         if len(np.unique(y_true[indices])) < 2:
             continue
-        score = precision_score(y_true[indices], y_pred[indices], average='macro')
-        bootstrapped_scores.append(score)
+        if is_binary : 
+            auroc, acc, precision, recall = return_binary_scores(y_true[indices], y_pred[indices])
+        else :
+            auroc, acc, precision, recall = return_multiclass_scores(y_true[indices], y_pred[indices])
 
-    sorted_scores = np.array(bootstrapped_scores)
-    sorted_scores.sort()
+        aurocs.append(auroc)
+        accs.append(acc)
+        precisions.append(precision)
+        recalls.append(recall)
 
-    # 95% CI
-    avg_score = np.mean(sorted_scores)
-    ci_low = sorted_scores[int(0.025 * len(sorted_scores))]
-    ci_high = sorted_scores[int(0.975 * len(sorted_scores))]
+    auroc_scores = sorted(np.array(aurocs))
+    acc_scores = sorted(np.array(accs))
+    precision_scores = sorted(np.array(precisions))
+    recall_scores = sorted(np.array(recalls))
 
-    return avg_score, ci_low, ci_high
+    def get_ci(scores):
+        avg_score = np.mean(scores)
+        ci_low = scores[int(0.025 * len(scores))]
+        ci_high = scores[int(0.975 * len(scores))]
+        return avg_score, ci_low, ci_high
+    
+    auc_avg, auc_low, auc_high = get_ci(auroc_scores)
+    acc_avg, acc_low, acc_high = get_ci(acc_scores)
+    precision_avg, precision_low, precision_high = get_ci(precision_scores)
+    recall_avg, recall_low, recall_high = get_ci(recall_scores)
+    return auc_avg, auc_low, auc_high, acc_avg, acc_low, acc_high, precision_avg, precision_low, precision_high, recall_avg, recall_low, recall_high
 
-def bootstraping_recall(y_true, y_pred, n_bootstraps=1000, seed=2023):
-    y_pred = np.argmax(y_pred, axis=1)
-    np.random.seed(seed)
-    bootstrapped_scores = []
-    for i in range(n_bootstraps):
-        # bootstrap by sampling with replacement on the prediction indices
-        indices = np.random.randint(0, len(y_pred), len(y_pred))
-        if len(np.unique(y_true[indices])) < 2:
-            continue
-        score = recall_score(y_true[indices], y_pred[indices], average='macro')
-        bootstrapped_scores.append(score)
 
-    sorted_scores = np.array(bootstrapped_scores)
-    sorted_scores.sort()
 
-    # 95% CI
-    avg_score = np.mean(sorted_scores)
-    ci_low = sorted_scores[int(0.025 * len(sorted_scores))]
-    ci_high = sorted_scores[int(0.975 * len(sorted_scores))]
 
-    return avg_score, ci_low, ci_high
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
 self.mean_tpr = np.mean(self.total_tprs, axis=0)
 self.mean_tpr[-1] = 1.0
