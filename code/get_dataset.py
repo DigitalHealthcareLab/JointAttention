@@ -24,7 +24,7 @@ valid_ratio = 0.11
 
 
 # 경로 및 Argument 설정
-ROOT_PATH    = Path('/home/data/asd_jointattention')
+ROOT_PATH    = Path('/mnt/2021_NIA_data/jointattention')
 DF_PATH      = ROOT_PATH.joinpath("participant_information_df.csv")
 DATA_PATH    = ROOT_PATH.joinpath("raw_data_bgr").joinpath(task_name.lower())
 PROC_PATH    = ROOT_PATH.joinpath("PROC_DATA").joinpath(task_name.lower())

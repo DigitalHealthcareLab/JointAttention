@@ -6,10 +6,10 @@ import torch
 from torchvision.transforms.functional import to_pil_image
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import transforms
-from data_loader_sev_frames import get_loader
-from custom_model_gradcam_res18 import GradCamModel
+# from data_loader_sev_frames import get_loader
+# from custom_model_gradcam_res18 import GradCamModel
 import matplotlib.pyplot as plt
-import myutils
+import src.myutils
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 

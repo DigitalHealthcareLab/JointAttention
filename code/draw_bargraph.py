@@ -19,8 +19,8 @@ import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from code.src.get_model_performances import score_loader
-from code.src.get_model_performances import bootstrap_score
+from src.get_model_performances import score_loader
+from src.get_model_performances import bootstrap_score
 
 
 def load_results(target_column, task_num, num_folds) :
