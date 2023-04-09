@@ -8,7 +8,8 @@ fold_num=$4 # 5
 max_fold_num=$(expr $fold_num - 1)
 for i in $(seq 0 $max_fold_num)
 do
-    echo "python train_model.py $target_column $task_num $data_ratio_name $i"
-    python train_model.py $target_column $task_num $data_ratio_name $i
+#     echo "python train_model.py $target_column $task_num $data_ratio_name $i"
+#     python train_model.py $target_column $task_num $data_ratio_name $i
+# done
+python inference_model.py $target_column 0
 done
-# python inference_model.py $target_column 0

@@ -55,15 +55,15 @@ def test_trained_network(model, test_loader, device):
 def inference_single_model(model, target_column, task_num, data_ratio_name, target_fold_num) :
     task = Task(task_num)
     task_name = task.name
-    ROOT_PATH    = Path('/home/data/asd_jointattention')
+    ROOT_PATH    = Path('/mnt/2021_NIA_data/jointattention')
     DATA_PATH    = ROOT_PATH.joinpath("raw_data_bgr").joinpath(task_name.lower())
     PROC_PATH    = ROOT_PATH.joinpath("PROC_DATA").joinpath(task_name.lower())
     if target_column == 'label' : 
-        PROJECT_PATH = Path(f'BINARY_FOLD_{data_ratio_name}_{target_column}').joinpath(task_name).joinpath(f'fold_{target_fold_num}')
+        PROJECT_PATH = Path(f'BINARY_FOLD_{target_column}').joinpath(task_name).joinpath(f'fold_{target_fold_num}')
         OUTPUT_SIZE = 2
         DROPOUT_RATIO = 0.5
     else :
-        PROJECT_PATH = Path(f'MULTI_FOLD_{data_ratio_name}_{target_column}').joinpath(task_name).joinpath(f'fold_{target_fold_num}')
+        PROJECT_PATH = Path(f'MULTI_FOLD_{target_column}').joinpath(task_name).joinpath(f'fold_{target_fold_num}')
         OUTPUT_SIZE = 3
         DROPOUT_RATIO = 0.1
     DF_PATH      = PROJECT_PATH.parent.joinpath("participant_information_df.csv")
