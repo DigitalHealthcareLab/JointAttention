@@ -53,6 +53,7 @@ class score_loader :
         for fold_num in range(num_folds): 
             self.load_fold_result(fold_num)
 
+
 def bootstraping_auc(y_true, y_pred, n_bootstraps=1000, seed=2023):
     # yonden_cut = find_youden_index(y_true, y_pred)
     np.random.seed(seed)
@@ -74,6 +75,7 @@ def bootstraping_auc(y_true, y_pred, n_bootstraps=1000, seed=2023):
     ci_high = sorted_scores[int(0.975 * len(sorted_scores))]
 
     return avg_score, ci_low, ci_high
+
 
 def bootstraping_acc(y_true, y_pred, n_bootstraps=1000, seed=2023):
     y_pred = np.argmax(y_pred, axis=1)
@@ -97,6 +99,7 @@ def bootstraping_acc(y_true, y_pred, n_bootstraps=1000, seed=2023):
     ci_high = sorted_scores[int(0.975 * len(sorted_scores))]
 
     return avg_score, ci_low, ci_high
+
 
 def bootstraping_f1(y_true, y_pred, n_bootstraps=1000, seed=2023):
     y_pred = np.argmax(y_pred, axis=1)
@@ -122,6 +125,7 @@ def bootstraping_f1(y_true, y_pred, n_bootstraps=1000, seed=2023):
 
     return avg_score, ci_low, ci_high
 
+
 def return_binary_scores(y_true, y_pred):
     soft_pred = y_pred[:,1]
     hard_pred = np.argmax(y_pred, axis=1)
@@ -131,6 +135,7 @@ def return_binary_scores(y_true, y_pred):
     recall = recall_score(y_true, hard_pred)
     # f1 = f1_score(y_true, hard_pred)
     return auroc, acc, precision, recall #, f1
+
 
 def return_multiclass_scores(y_true, y_pred):
     soft_pred = y_pred.copy()
@@ -171,6 +176,7 @@ def bootstrap_score(y_true, y_pred, n_bootstraps=3000, score_type="auc", seed=20
     acc_scores = sorted(np.array(accs))
     precision_scores = sorted(np.array(precisions))
     recall_scores = sorted(np.array(recalls))
+
 
     def get_ci(scores):
         avg_score = np.mean(scores)

@@ -135,8 +135,8 @@ def main():
         task = Task(task_num)
         task_name = task.name
         for data_ratio_name, num_folds in [
-                                            ['811', 5], 
-                                            # ['622', 20]
+                                            ['811', 10], 
+                                            # ['622', 10]
                                             ] : 
             print(f"Start inference for {task_name} {data_ratio_name} {target_column} {c} / {total_num_tasks}" )
 
@@ -147,7 +147,6 @@ def main():
             
             c+=1
                     
-
 
 if __name__ == "__main__":
     main()

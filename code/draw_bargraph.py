@@ -19,8 +19,8 @@ import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from src.get_model_performances import score_loader
-from src.get_model_performances import bootstrap_score
+from src.get_model_performance import score_loader
+from src.get_model_performance import bootstrap_score
 
 
 def load_results(target_column, task_num, num_folds) :
@@ -32,7 +32,7 @@ def load_results(target_column, task_num, num_folds) :
     task = Task(task_num)
     task_name = task.name
 
-    ROOT_PATH    = Path('/home/data/asd_jointattention')
+    ROOT_PATH    = Path('/mnt/2021_NIA_data/jointattention')
     if target_column == 'label' : 
         PROJECT_PATH = Path(f'BINARY_FOLD_{target_column}').joinpath(task_name)
     else :
@@ -44,6 +44,7 @@ def load_results(target_column, task_num, num_folds) :
     preds = np.array(loader.total_preds)
     num_labels = len(np.unique(labels))
     return PROJECT_PATH, labels, preds, num_labels
+
 
 def draw_performance_plot(score_df, image_save_path : Path, title) : 
     # plt.figure(figsize = (12,12))
@@ -77,6 +78,7 @@ def draw_performance_plot(score_df, image_save_path : Path, title) :
     plt.savefig(image_save_path, dpi=300, bbox_inches='tight', pad_inches=0, transparent=True, format='pdf')
     plt.close()
 
+
 def return_score_results(labels, preds, auc_scores) : 
     # hard_preds = np.argmax(preds, axis=1)
     auc, auc_ci_low, auc_ci_high,\
@@ -85,10 +87,12 @@ def return_score_results(labels, preds, auc_scores) :
     recall, recall_ci_low, recall_ci_high  = bootstrap_score(labels, preds, 5000)
     return [auc, auc_ci_low, auc_ci_high, accuracy, acc_ci_low, acc_ci_high, precision, precision_ci_low, precision_ci_high, recall, recall_ci_low, recall_ci_high]
 
+
 def load_task_result(target_column, task_num, num_folds) :
     PROJECT_PATH, labels, preds, num_labels = load_results(target_column, task_num, num_folds)
     score_results = return_score_results(labels, preds, auc)
     return PROJECT_PATH, score_results
+
 
 if __name__ == '__main__' :
     columns = ['task', 'AUROC', 'AUROC_CI_low', 'AUROC_CI_high', 'Accuracy', 'Accuracy_CI_low', 'Accuracy_CI_high', 'Precision', 'Precision_CI_low', 'Precision_CI_high', 'Recall', 'Recall_CI_low', 'Recall_CI_high']
@@ -124,7 +128,8 @@ if __name__ == '__main__' :
             draw_performance_plot(score_df, image_save_path, title)
         else : 
             score_dfs = []
-            for task_num, [task_name, new_task_name] in enumerate([['IJA', 'IJA'],
+            for task_num, [task_name, new_task_name] in enumerate([
+                                        ['IJA', 'IJA'],
                                         ['RJA_LOW','RJA low'] ,
                                         ['RJA_HIGH', 'RJA high']], 1) :
                 PROJECT_PATH, score_results = load_task_result(target_column, task_num, num_folds)
