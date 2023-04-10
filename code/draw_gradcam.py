@@ -1,144 +1,143 @@
-from enum import Enum, auto
+import os
 from pathlib import Path
+from tqdm import tqdm
+import pandas as pd
 import numpy as np
-import cv2
 import torch
+import copy
+import cv2
+import matplotlib.pylab as plt
+import torch.nn as nn
 from torchvision.transforms.functional import to_pil_image
-from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import transforms
-# from data_loader_sev_frames import get_loader
-# from custom_model_gradcam_res18 import GradCamModel
-import matplotlib.pyplot as plt
-import src.myutils
-# import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+import torchvision.transforms as transforms
+from PIL import Image
+from enum import Enum, auto
+from torch.utils.data import DataLoader
+from joblib import Parallel, delayed
+
+from src.custom_model_videos_res18 import Resnet18Rnn
+from src.custom_model_videos_gradcam import GradCamModel
+from src.data_loader_videos import VideoDataset
+
 
 class Task(Enum):
     IJA = auto()
     RJA_LOW = auto()
     RJA_HIGH = auto()
 
+def set_paths(target_name, task_num) : 
+    task = Task(task_num)
+    task_name = task.name
 
-PROJECT_PATH = Path(__file__).parents[1]
-DATA_PATH = Path(PROJECT_PATH, "data")
-FIG_PATH = Path(PROJECT_PATH, "figures")
-CHECKPOINT_PATH = Path(
-    PROJECT_PATH,
-    "checkpoint/best_diagnosis/res18rnn_rjahigh_diagnosis_811_221123_weight_3.pt",
-)  # specify which weight
+    ROOT_PATH    = Path('/home/data/asd_jointattention')
+    DATA_PATH    = ROOT_PATH.joinpath("raw_data_bgr").joinpath(task_name.lower())
+    PROC_PATH    = ROOT_PATH.joinpath("PROC_DATA").joinpath(task_name.lower())
+    TARGET_ROOT_PATH = Path(f'BINARY_FOLD_{target_name}') if target_name == 'label' else Path(f'MULTI_FOLD_{target_name}')
+    PROJECT_PATH = TARGET_ROOT_PATH.joinpath(task_name)
+    DF_PATH      = PROJECT_PATH.joinpath("participant_information_df.csv")
+    return task, DATA_PATH, PROC_PATH, PROJECT_PATH, DF_PATH
 
-BATCH_SIZE = 1
-TIME_STEPS = 50  # 300/3 if IJA, 150/3 if RJA_high & RJA_low
+def get_frames(array_path : Path) : 
+    array = np.load(array_path)
+    frames = array[::3]
+    return frames
 
 
-def test_gradcam_network(model, xb, yb, device):
-    model.eval()
-    torch.backends.cudnn.enabled = False
-    model.zero_grad()
-    xb = xb.to(device)
-    # yb = yb.to(device)
-    output = model(xb)
+def process_single_image(X, y, file_idx, model_ckpt) : 
+    X = X.float().to(device)
+    y = y.long().to(device)
+    patient_id = patient_ids[file_idx]
+    file_name = file_names[file_idx]
 
-    c = yb
-    activations = model.get_activations(xb).detach()
+    model = Resnet18Rnn(
+                    batch_size=BATCH_SIZE,
+                    input_size=512,
+                    output_size=OUTPUT_SIZE,
+                    seq_len=SEQ_LEN,
+                    num_hiddens=512,
+                    num_layers=2,
+                    dropout=DROPOUT_RATIO,
+                    attention_dim=SEQ_LEN,
+                )
 
+    model.load_state_dict(torch.load(model_ckpt))
+    for param in model.parameters():
+        param.requires_grad = True
+    model.to(device)
+
+    gradcam_model = GradCamModel(model)
+    gradcam_model.to(device)
+    gradcam_model.train()
+
+
+
+    # print(f'patient_id : {patient_id}, file_name : {file_name}')
+
+    file_save_path = save_path.joinpath(target_name, task_name, f"fold_{fold_num}", str(patient_id), file_name).with_suffix(".npy")
+    file_save_path.parent.mkdir(parents=True, exist_ok=True)
+    
+
+    output = gradcam_model(X)
+    c = y
+
+    gradcam_model.zero_grad()
     output[:, c].backward()
-    gradients = model.get_activations_gradient()
-    # pool the gradients across the channels
+    gradients = gradcam_model.get_activations_gradient()
     pooled_gradients = torch.mean(gradients, dim=[0, 3, 4])
-    # print(gradients.shape) #[1, 512, 50, 7, 7]
-    # print(pooled_gradients.shape) #[512, 50]
-
-    activations = model.get_activations(xb).detach()
-    channels, TIME_STEPS = activations.shape[1], activations.shape[2]
+    activations = gradcam_model.get_activations(X).detach()
+    channels, n_frames = activations.shape[1], activations.shape[2]
     for i in range(channels):
-        for j in range(TIME_STEPS):
-            activations[:, i, j, :, :] *= pooled_gradients[i, j]
-
+        for j in range(n_frames):
+            activations[:,i,j,:,:]*= pooled_gradients[i,j]
+            
     heatmap = torch.mean(activations, dim=1).squeeze().cpu()
-    heatmap = np.maximum(heatmap, 0)
-    for i in range(TIME_STEPS):
-        heatmap[i] /= torch.max(heatmap[i])
+    heatmap = np.maximum(heatmap,0)
+    for i in range(n_frames):
+        heatmap[i]/=torch.max(heatmap[i])
     heatmap = heatmap.numpy()
-    return heatmap
+
+    input_img = X.squeeze().cpu().numpy()
+    input_img = np.transpose(input_img, (0,2,3,1))
+
+    input_img = (input_img - np.min(input_img)) / (np.max(input_img) - np.min(input_img))
+    input_img = np.uint8(255*input_img)
+    # input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
+    heatmap = np.uint8(255*heatmap)
+    np.save(file_save_path, heatmap)
+    np.save(file_save_path.with_name(f'{file_name}_raw.npy'), input_img)
 
 
-def draw_gradcam(imgs, heatmap, png_name):
+for target_name in [
+                'label', 
+                'sev_ados'
+                ] : 
+    for task_num in range(1,4) : 
+        task, DATA_PATH, PROC_PATH, PROJECT_PATH, DF_PATH = set_paths(target_name, task_num)
+        task_name = task.name
+        BATCH_SIZE = 1
+        OUTPUT_SIZE = 2 if target_name == 'label' else 3
+        SEQ_LEN = 100 if task_num == 1 else 50
+        DROPOUT_RATIO = 0.5 if target_name == 'label' else 0.1
+        device = 'cuda'
+        fold_num = 0
+        for fold_num in range(10) : 
+            
+            my_transform = transforms.ToTensor()
+            total_dataset = VideoDataset(PROC_PATH, DF_PATH, "", my_transform, fold_num)
+            total_loader = DataLoader(
+                                    total_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0
+                                    )
 
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
+            FOLD_PATH = PROJECT_PATH.joinpath(f'fold_{fold_num}')
+            model_ckpts = np.array(sorted(list(FOLD_PATH.glob('*.pt')), key = lambda x : int(x.stem.split('_')[-1])))
+            model_ckpt = model_ckpts[-1]
 
-    plt.figure(figsize=(20, 10))
-    x = 0.004
-    count = 0
-    n_layout_cnt = 10
-    n_step = int(TIME_STEPS / n_layout_cnt)
-    for ii in range(0, TIME_STEPS, n_step):  # 4 frames
-        count += 1
-        img_ = np.array(myutils.denormalize(imgs[ii].cpu(), mean, std))
-        plt.subplot(2, 5, count)
-        heatmap_ = cv2.resize(heatmap[ii], (img_.shape[1], img_.shape[0]))
-        heatmap_ = np.uint8(255 * (1 - heatmap_))
-        heatmap_ = cv2.applyColorMap(heatmap_, cv2.COLORMAP_JET)
+            save_path = Path('GradCAM')
 
-        superimposed_img = heatmap_ * 0.8 + img_
-        superimposed_img = superimposed_img / np.max(superimposed_img)
-        #     cv2.imwrite('./map.jpg', superimposed_img)
-        plt.axis("off")
-        plt.imshow(superimposed_img)
-        plt.title(png_name)
+            df = total_loader.dataset.data
 
-    plt.savefig(Path(FIG_PATH / f"gradcam/{task.name.lower()}", png_name))
-
-    plt.figure(figsize=(20, 10))
-    count = 0
-    for ii in range(0, TIME_STEPS, n_step):  # 20, 24
-        count += 1
-        plt.subplot(2, 5, count)
-        plt.imshow(myutils.denormalize(imgs[ii], mean, std))
-        x = plt.axis("off")
-
-    plt.savefig(Path(FIG_PATH / f"gradcam/{task.name.lower()}", png_name + "_original"))
+            patient_ids = df['id'].values
+            file_names = df['file_name'].values
 
 
-def main(task: Task):
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # print(device)
-    # print("Current cuda device:", torch.cuda.device_count())
-
-    params_model = {
-        "num_classes": 2,
-        "dr_rate": 0.1,
-        "rnn_num_layers": 2,
-        "rnn_hidden_size": 512,
-        "timesteps": TIME_STEPS,
-        "checkpoint_path": CHECKPOINT_PATH,
-    }
-
-    model = GradCamModel(params_model).to(device)
-    _, _, test_loader = get_loader(task, BATCH_SIZE, DATA_PATH)
-
-    for i in range(len(test_loader.dataset.data)):
-        test_loader.dataset.data.iloc[i]
-        imgs, y = test_loader.dataset.get_frame(i)
-        imgs = imgs.unsqueeze(0)
-        y = [y]
-
-        heatmap = test_gradcam_network(model, imgs, y, device)
-
-        filename = test_loader.dataset.data.iloc[i]["file_name"]
-        label = test_loader.dataset.data.iloc[i]["label"]
-        if label == 0:
-            label = "TD"
-        else:
-            label = "ASD"
-        png_name = f"{filename}_{label}".replace(".mp4", "")
-        print(png_name)
-
-        draw_gradcam(imgs.squeeze(0), heatmap, png_name)
-
-
-#%%
-if __name__ == "__main__":
-    task = Task.RJA_HIGH 
-    main(task)
+            Parallel(n_jobs=12)(delayed(process_single_image)(X, y, file_idx, model_ckpt) for file_idx, (X, y) in tqdm(enumerate(total_loader), total=len(total_loader)))
