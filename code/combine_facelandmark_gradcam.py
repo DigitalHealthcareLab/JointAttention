@@ -30,7 +30,7 @@ def point_image(video_dlib, video_gradcam, seq) :
     for seq_dlib in seq_dlibs : 
         for point, x, y in seq_dlib : 
             x, y = int(x), int(y)
-            seq_gradcam = cv2.circle(seq_gradcam, (x,y), 3, (0,0,0), -1)
+            seq_gradcam = cv2.circle(seq_gradcam, (x,y), 1, (0,0,0), -1)
     
     return seq_gradcam
 
@@ -56,6 +56,7 @@ def save_video(video_path, seq_len) :
         plt.axis('off')
         # plt.savefig(seq_pdf_save_path, bbox_inches='tight', pad_inches=0, dpi=300, transparent=True, format='pdf')
         plt.savefig(seq_png_save_path, bbox_inches='tight', pad_inches=0, dpi=100, transparent=True, format='png')
+        plt.close()
 
 # for task_name in ['IJA', 'RJA_LOW', 'RJA_HIGH'] : 
 
