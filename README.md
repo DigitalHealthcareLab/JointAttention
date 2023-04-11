@@ -5,8 +5,8 @@
 * opencv version: 4.7.0
 
 ## Objective
-- Create a classification model for ASD(Autism Spectrum Disorder) vs TD(Typical Development)
-- Create a classification model for non-ASD vs mild-moderate ASD vs severe ASD
+- Create JA-based classification model for ASD(Autism Spectrum Disorder) vs TD(Typical Development)
+- Create JA-based classification model for non-ASD vs mild-moderate ASD vs severe ASD
 
 ## Project structure
 * code
@@ -31,7 +31,7 @@
 * Cut-offs for multi-labels are based on on ADOS CSS or CARS cut-off scores
 
 ## How to run codes
-* Run 'process_multiple_targets.sh to train and validate models
-* Run 'draw_bargraph.py' to get graphical performance measure results
-* Run 'draw_clustermap.py' to draw cluster maps using attention weights
-* Run 'draw_gradcam.py' to draw gradcam on RGB videos used in model training
+* Run *code/process_multiple_targets.sh* to train and validate models
+* Run *code/draw_bargraph.py* to get graphical performance measure results
+* Run *code/draw_clustermap.py* to draw cluster maps using attention weights
+* Run *code/draw_gradcam.py* to draw gradcam on RGB videos used in model training
